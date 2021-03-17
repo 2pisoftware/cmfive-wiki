@@ -3,11 +3,11 @@
 /*********************************************
  * Save POST updates to body field into WikiPage
  *********************************************/
-function edit_POST(Web &$w)
+function preview_GET(Web &$w)
 {
     try {
         $pm = $w->pathMatch("wikiname", "pagename");
-        $wiki = $w->Wiki->getWikiByName($pm['wikiname']);
+        $wiki = WikiService::getInstance($w)->getWikiByName($pm['wikiname']);
         if (!$wiki) {
             $w->error("Wiki does not exist.");
         }
@@ -15,9 +15,15 @@ function edit_POST(Web &$w)
         if (!$wp) {
             $w->error("Page does not exist.");
         }
-        $wp->body = $w->request("wikibody");
-        $wp->update();
-        $w->msg("Page updated.", "/wiki/view/" . $pm['wikiname'] . "/" . $pm['pagename']);
+        $w->setLayout(null);
+        $body = "";
+        if ($wiki->type == "richtext") {
+            $body = $wp->body;
+        } elseif ($wiki->type == "markdown") {
+            $body = WikiLib::wiki_format_cebe($wiki, $wp);
+        }
+        $body = WikiLib::replaceWikiCode($wiki, $wp, $body);
+        echo $body;
     } catch (WikiException $ex) {
         $w->error($ex->getMessage(), "/wiki");
     }
